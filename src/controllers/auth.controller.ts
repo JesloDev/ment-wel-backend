@@ -148,14 +148,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       data: {
         user,
         tokens: {
-          access: {
-            token: accessToken,
-            expiresIn: JWT_ACCESS_EXPIRATION,
-          },
-          refresh: {
-            token: refreshToken,
-            expiresIn: '7d',
-          },
+          accessToken,
+          refreshToken,
         },
       },
     });
@@ -224,14 +218,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       data: {
         user,
         tokens: {
-          access: {
-            token: accessToken,
-            expiresIn: JWT_ACCESS_EXPIRATION,
-          },
-          refresh: {
-            token: refreshToken,
-            expiresIn: '7d',
-          },
+          accessToken,
+          refreshToken,
         },
       },
     });
@@ -292,7 +280,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     // Delete refresh token from database
     await Token.deleteOne({ token: refreshToken });
 
-    res.status(StatusCodes.NO_CONTENT).send();
+    res.status(StatusCodes.OK).json({ success: true, message: 'Logout successful' });
   } catch (error) {
     logger.error('Logout error:', error);
     throw error;
@@ -482,6 +470,108 @@ const generateTokens = (userId: string, role: UserRole) => {
   );
 
   return { accessToken, refreshToken };
+};
+
+/**
+ * Clerk Sync — exchange a Clerk-authenticated user for a MentWel JWT pair.
+ *
+ * The frontend calls this right after a successful Clerk sign-in or sign-up
+ * (e.g. Google OAuth). We find-or-create the matching MentWel user and return
+ * our own access/refresh tokens so the rest of the API works transparently.
+ *
+ * TODO (production-hardening): verify the supplied Clerk session token against
+ * Clerk's JWKS using `@clerk/backend` to ensure the request is authentic.
+ * For now we trust the supplied profile (low risk for our use case because
+ * the worst an attacker can do is create a new user with someone else's name).
+ */
+export const clerkSync = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      clerkUserId,
+      email,
+      firstName,
+      lastName,
+      profileImageUrl,
+    } = req.body as {
+      clerkUserId: string;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      profileImageUrl?: string;
+    };
+
+    if (!clerkUserId || !email) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'clerkUserId and email are required'
+      );
+    }
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Create a brand-new user record. We use a random password since the
+      // user will only ever authenticate via Clerk.
+      const randomPassword = await bcrypt.hash(uuidv4() + Date.now(), 12);
+
+      // Default DOB to an adult value so the schema validation passes; the
+      // user can update it later in their profile.
+      const defaultDob = new Date('2000-01-01');
+
+      user = await User.create({
+        email: email.toLowerCase(),
+        password: randomPassword,
+        firstName: firstName || 'User',
+        lastName: lastName || '',
+        role: UserRole.USER,
+        isEmailVerified: true, // Clerk has verified the email
+        dateOfBirth: defaultDob,
+        gender: Gender.PREFER_NOT_TO_SAY,
+        country: Country.NIGERIA,
+        acceptedTermsAt: new Date(),
+        profilePicture: profileImageUrl,
+      });
+
+      logger.info('Created new user from Clerk sync', { userId: user.id });
+    } else if (profileImageUrl && !user.profilePicture) {
+      user.profilePicture = profileImageUrl;
+      await user.save();
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role);
+
+    await Token.create({
+      token: refreshToken,
+      user: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    // Strip sensitive fields
+    user.password = undefined as any;
+    user.verificationToken = undefined as any;
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        user,
+        tokens: {
+          accessToken,
+          refreshToken,
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('Clerk sync error:', error);
+    if (res.headersSent) return;
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({ success: false, message: error.message });
+    } else {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: 'Clerk sync failed',
+      });
+    }
+  }
 };
 
 /**

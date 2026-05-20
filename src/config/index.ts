@@ -16,6 +16,7 @@ export const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '7d'
 
 export const CLIENT_URL = process.env.CLIENT_URL || 'https://plp-ment-wel.netlify.app';
 export const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
+export const API_BASE_URL = process.env.API_BASE_URL || `http://localhost:${PORT}/api/v1`;
 
 export const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 export const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET || '';
@@ -50,6 +51,7 @@ export const config = {
   },
   clientUrl: CLIENT_URL,
   serverUrl: SERVER_URL,
+  apiBaseUrl: API_BASE_URL,
   redis: {
     url: REDIS_URL,
   },

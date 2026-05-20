@@ -77,16 +77,23 @@ class App {
     // Security middleware
     this.app.use(helmet());
     
-    // CORS configuration with explicit origins
+    // CORS configuration with explicit origins.
+    // Extra origins can be added via the CORS_ORIGINS env var (comma-separated).
+    const extraOrigins = (process.env.CORS_ORIGINS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     const corsOptions = {
       origin: [
         'https://plp-ment-wel.netlify.app',
         'http://localhost:3000',
         'http://localhost:8000',
-        'http://localhost:5000'
+        'http://localhost:5000',
+        ...extraOrigins,
       ],
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     };
     
@@ -94,6 +101,9 @@ class App {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(compression());
+
+    // Static uploads (profile pictures, etc.)
+    this.app.use('/uploads', express.static('uploads'));
     
     // Request logging
     this.app.use(morgan(LOG_FORMAT, { stream }));

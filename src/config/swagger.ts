@@ -1,5 +1,5 @@
 import swaggerJSDoc from 'swagger-jsdoc';
-import { NODE_ENV, SERVER_URL } from './index';
+import { API_BASE_URL, SERVER_URL } from './index';
 
 const swaggerDefinition = {
   openapi: '3.0.3',
@@ -8,37 +8,34 @@ const swaggerDefinition = {
     description: `
 # MentWel Digital Mental Health Platform API
 
-A secure, production-ready REST API for mental health services with comprehensive authentication and user management.
+A secure, production-ready REST API powering the MentWel mental health platform.
 
-## 🚀 Current Status
-- **Live Production URL:** https://plp-final-project-backend.onrender.com
-- **Authentication System:** ✅ Fully Implemented
-- **User Registration:** ✅ With Nigerian phone validation, gender/country selection
-- **Email Verification:** ✅ With graceful fallback support
-- **Security Features:** ✅ JWT auth, rate limiting, CORS, helmet protection
+## Modules
+- **Authentication** — Registration, login, password reset, email verification, JWT refresh
+- **Assessments** — Mental health self-assessments with scoring and history
+- **Chat** — Real-time messaging between users and counselors
+- **Mood Tracking** — Daily mood logging and history
+- **Therapy Sessions** — Booking, cancellation, and completion of therapy sessions
+- **Therapists** — Directory listing, search, and filtering
+- **Users** — Profile management and profile picture uploads
+- **Resources** — Articles, videos, podcasts, and bookmarks
+- **Admin** — Dashboard statistics and user management
 
-## 📋 Available Endpoints
-- **Authentication:** Complete user registration, login, password reset, email verification
-- **Health Check:** System monitoring and status
-- **Future Modules:** User profiles, therapist management, sessions, messaging, appointments
-
-## 🔐 Security Features
-- Rate limiting (5 registration attempts/hour)
-- JWT token authentication with refresh tokens
+## Security Features
+- JWT bearer token authentication with refresh tokens
+- Rate limiting (5 registration attempts/hour, 100 req/15 min default)
 - Nigerian phone number validation (+234XXXXXXXXX)
 - Password complexity requirements
 - Age verification (18+ only)
-- Email verification with fallback support
-- CORS and security headers enabled
+- CORS and Helmet security headers
 
-## 🌍 Supported Regions
+## Supported Regions
 - Primary: Nigeria (with local phone validation)
 - Additional: Ghana, Kenya, South Africa
     `,
     version: '1.0.0',
     contact: {
       name: 'MentWel Team',
-      url: 'https://plp-final-project-backend.onrender.com',
     },
     license: {
       name: 'ISC',
@@ -46,24 +43,25 @@ A secure, production-ready REST API for mental health services with comprehensiv
   },
   servers: [
     {
-      url: 'https://plp-final-project-backend.onrender.com',
-      description: 'Production server (Live)',
+      url: SERVER_URL,
+      description: 'Configured server',
     },
     {
       url: 'http://localhost:5000',
-      description: 'Development server (Local)',
+      description: 'Local development server',
     },
   ],
   tags: [
     { name: 'Health', description: 'Health check and system diagnostics' },
-    { name: 'Auth', description: 'User authentication, registration, and token management with email verification fallback' },
-    { name: 'Users', description: 'User profile operations (Coming Soon)' },
-    { name: 'Therapists', description: 'Therapist management operations (Coming Soon)' },
-    { name: 'Sessions', description: 'Therapy sessions management (Coming Soon)' },
-    { name: 'Messages', description: 'Real-time messaging and history (Coming Soon)' },
-    { name: 'Appointments', description: 'Appointment scheduling and management (Coming Soon)' },
-    { name: 'Notifications', description: 'User notifications system (Coming Soon)' },
-    { name: 'Admin', description: 'Administrative operations (Coming Soon)' },
+    { name: 'Auth', description: 'User authentication, registration, and token management' },
+    { name: 'Users', description: 'User profile operations' },
+    { name: 'Assessments', description: 'Mental health self-assessments' },
+    { name: 'Chat', description: 'Counselor messaging sessions' },
+    { name: 'Mood', description: 'Daily mood tracking' },
+    { name: 'Sessions', description: 'Therapy session management' },
+    { name: 'Therapists', description: 'Therapist directory and search' },
+    { name: 'Resources', description: 'Educational resources and bookmarks' },
+    { name: 'Admin', description: 'Administrative operations' },
   ],
   components: {
     securitySchemes: {
@@ -84,6 +82,23 @@ A secure, production-ready REST API for mental health services with comprehensiv
           data: { type: 'object' },
         },
       },
+      ErrorResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          message: { type: 'string', example: 'Error message' },
+          errors: { type: 'array', items: { type: 'object' } },
+        },
+      },
+      Pagination: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', example: 1 },
+          limit: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 100 },
+          totalPages: { type: 'integer', example: 5 },
+        },
+      },
       LoginRequest: {
         type: 'object',
         required: ['email', 'password'],
@@ -96,79 +111,40 @@ A secure, production-ready REST API for mental health services with comprehensiv
         type: 'object',
         required: ['password', 'confirmPassword', 'firstName', 'lastName', 'dateOfBirth', 'gender', 'acceptTerms'],
         properties: {
-          email: { 
-            type: 'string', 
-            format: 'email', 
+          email: {
+            type: 'string',
+            format: 'email',
             example: 'user@example.com',
-            description: 'Valid email address. Provide either email OR phoneNumber (not both).' 
+            description: 'Valid email address. Provide either email OR phoneNumber (not both).',
           },
-          phoneNumber: { 
-            type: 'string', 
-            format: 'phone',
+          phoneNumber: {
+            type: 'string',
             pattern: '^\\+234[789][01]\\d{8}$',
             example: '+2348012345678',
-            description: 'Valid Nigerian phone number with country code +234 (11 digits total). Format: +234XXXXXXXXX. Provide either email OR phoneNumber (not both).' 
+            description: 'Valid Nigerian phone number with country code +234 (11 digits total).',
           },
           password: {
             type: 'string',
             minLength: 8,
-            pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$',
             example: 'SecurePass123!',
-            description: 'Password must be at least 8 characters with: 1 uppercase, 1 lowercase, 1 number, 1 special character',
+            description: 'At least 8 characters with: 1 uppercase, 1 lowercase, 1 number, 1 special character',
           },
-          confirmPassword: {
-            type: 'string',
-            minLength: 8,
-            example: 'SecurePass123!',
-            description: 'Must match the password field exactly. Used to prevent password entry errors.',
-          },
-          firstName: { 
-            type: 'string', 
-            example: 'John',
-            description: 'User first name'
-          },
-          lastName: { 
-            type: 'string', 
-            example: 'Doe',
-            description: 'User last name'
-          },
-          dateOfBirth: { 
-            type: 'string', 
-            format: 'date', 
-            example: '1990-01-01',
-            description: 'Date of birth in YYYY-MM-DD format. User must be 18 or older.'
-          },
-          gender: {
-            type: 'string',
-            enum: ['male', 'female', 'other', 'prefer_not_to_say'],
-            description: 'User gender selection (required)',
-            example: 'male'
-          },
+          confirmPassword: { type: 'string', minLength: 8, example: 'SecurePass123!' },
+          firstName: { type: 'string', example: 'John' },
+          lastName: { type: 'string', example: 'Doe' },
+          dateOfBirth: { type: 'string', format: 'date', example: '1990-01-01' },
+          gender: { type: 'string', enum: ['male', 'female', 'other', 'prefer_not_to_say'], example: 'male' },
           country: {
             type: 'string',
             enum: ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'Other'],
             default: 'Nigeria',
-            description: 'Country of residence (defaults to Nigeria)',
-            example: 'Nigeria'
+            example: 'Nigeria',
           },
-          role: {
-            type: 'string',
-            enum: ['user', 'therapist'],
-            default: 'user',
-            description: 'User role - defaults to user for regular users, set to therapist for mental health professionals'
-          },
-          acceptTerms: { 
-            type: 'boolean', 
-            example: true, 
-            description: 'Must be true to accept Terms of Service and Privacy Policy (required)' 
-          },
-          recaptchaToken: { 
-            type: 'string', 
-            description: 'reCAPTCHA v3 token for bot protection (optional in development)' 
-          },
+          role: { type: 'string', enum: ['user', 'therapist'], default: 'user' },
+          acceptTerms: { type: 'boolean', example: true },
+          recaptchaToken: { type: 'string' },
         },
-        description: 'User registration requires either email OR phoneNumber (not both), along with all other required fields.',
-        additionalProperties: false
+        additionalProperties: false,
       },
       RefreshRequest: {
         type: 'object',
@@ -209,13 +185,14 @@ A secure, production-ready REST API for mental health services with comprehensiv
           phoneNumber: { type: 'string', example: '+2348012345678' },
           isPhoneVerified: { type: 'boolean', example: false },
           isEmailVerified: { type: 'boolean', example: true },
-          status: { type: 'string', enum: ['active', 'inactive', 'suspended', 'pending_verification'], example: 'active' },
+          status: { type: 'string', enum: ['active', 'inactive', 'suspended', 'pending_verification'] },
           dateOfBirth: { type: 'string', format: 'date', example: '1990-01-01' },
-          gender: { type: 'string', enum: ['male', 'female', 'other', 'prefer_not_to_say'], example: 'male' },
-          country: { type: 'string', enum: ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'Other'], example: 'Nigeria' },
-          acceptedTermsAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00.000Z' },
-          createdAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00.000Z' },
-          updatedAt: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00.000Z' },
+          gender: { type: 'string', enum: ['male', 'female', 'other', 'prefer_not_to_say'] },
+          country: { type: 'string', enum: ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'Other'] },
+          profilePicture: { type: 'string', example: 'http://localhost:5000/uploads/profile-pictures/abc.png' },
+          acceptedTermsAt: { type: 'string', format: 'date-time' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
         },
       },
       AuthTokens: {
@@ -224,14 +201,14 @@ A secure, production-ready REST API for mental health services with comprehensiv
           access: {
             type: 'object',
             properties: {
-              token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+              token: { type: 'string', example: 'eyJhbGciOi...' },
               expiresIn: { type: 'string', example: '15m' },
             },
           },
           refresh: {
             type: 'object',
             properties: {
-              token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+              token: { type: 'string', example: 'eyJhbGciOi...' },
               expiresIn: { type: 'string', example: '7d' },
             },
           },
@@ -250,6 +227,258 @@ A secure, production-ready REST API for mental health services with comprehensiv
           },
         },
       },
+
+      // Assessment schemas
+      QuestionOption: {
+        type: 'object',
+        properties: {
+          value: { type: 'integer', example: 1 },
+          label: { type: 'string', example: 'Several days' },
+        },
+      },
+      Question: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'q1' },
+          text: { type: 'string', example: 'Little interest or pleasure in doing things' },
+          type: { type: 'string', enum: ['likert', 'multiple_choice'], example: 'likert' },
+          options: { type: 'array', items: { $ref: '#/components/schemas/QuestionOption' } },
+        },
+      },
+      Assessment: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          title: { type: 'string', example: 'PHQ-9 Depression Screening' },
+          description: { type: 'string' },
+          category: { type: 'string', example: 'depression' },
+          questionCount: { type: 'integer', example: 9 },
+          estimatedMinutes: { type: 'integer', example: 5 },
+          questions: { type: 'array', items: { $ref: '#/components/schemas/Question' } },
+        },
+      },
+      AssessmentSubmitRequest: {
+        type: 'object',
+        required: ['answers'],
+        properties: {
+          answers: {
+            type: 'object',
+            additionalProperties: { type: 'integer' },
+            example: { q1: 2, q2: 1, q3: 3 },
+          },
+        },
+      },
+      AssessmentResult: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          assessmentId: { type: 'string' },
+          assessmentTitle: { type: 'string' },
+          score: { type: 'integer', example: 12 },
+          maxScore: { type: 'integer', example: 27 },
+          percentage: { type: 'integer', example: 44 },
+          severity: { type: 'string', enum: ['minimal', 'mild', 'moderate', 'severe'] },
+          interpretation: { type: 'string' },
+          recommendations: { type: 'array', items: { type: 'string' } },
+          completedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      // Chat schemas
+      ChatSession: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          userId: { type: 'string' },
+          counselorId: { type: 'string' },
+          status: { type: 'string', enum: ['active', 'ended', 'pending'] },
+          startedAt: { type: 'string', format: 'date-time' },
+          lastMessageAt: { type: 'string', format: 'date-time' },
+          counselor: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              avatar: { type: 'string' },
+              isOnline: { type: 'boolean' },
+            },
+          },
+          unreadCount: { type: 'integer' },
+          lastMessage: { type: 'string' },
+        },
+      },
+      ChatMessage: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          sessionId: { type: 'string' },
+          senderId: { type: 'string' },
+          senderType: { type: 'string', enum: ['user', 'counselor'] },
+          content: { type: 'string' },
+          timestamp: { type: 'string', format: 'date-time' },
+          read: { type: 'boolean' },
+          type: { type: 'string', enum: ['text', 'image', 'file'] },
+        },
+      },
+      SendMessageRequest: {
+        type: 'object',
+        required: ['content'],
+        properties: {
+          content: { type: 'string', example: 'Hello, I need some advice.' },
+          type: { type: 'string', enum: ['text', 'image', 'file'], default: 'text' },
+        },
+      },
+      StartChatRequest: {
+        type: 'object',
+        required: ['counselorId'],
+        properties: { counselorId: { type: 'string', example: '507f1f77bcf86cd799439011' } },
+      },
+      AvailableCounselor: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          avatar: { type: 'string' },
+          isOnline: { type: 'boolean' },
+          lastSeen: { type: 'string', format: 'date-time' },
+          specialties: { type: 'array', items: { type: 'string' } },
+          rating: { type: 'number' },
+          experience: { type: 'integer' },
+        },
+      },
+
+      // Mood schemas
+      MoodEntry: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          mood: { type: 'integer', minimum: 1, maximum: 5, example: 4 },
+          note: { type: 'string', example: 'Feeling productive today' },
+          date: { type: 'string', example: '2025-05-20' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      MoodEntryRequest: {
+        type: 'object',
+        required: ['mood', 'date'],
+        properties: {
+          mood: { type: 'integer', minimum: 1, maximum: 5, example: 4 },
+          note: { type: 'string' },
+          date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', example: '2025-05-20' },
+        },
+      },
+
+      // Therapy session schemas
+      TherapySession: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          user_id: { type: 'string' },
+          therapist_id: { type: 'string' },
+          scheduled_at: { type: 'string', format: 'date-time' },
+          duration: { type: 'integer', example: 60 },
+          session_type: { type: 'string', enum: ['text', 'voice', 'video'] },
+          status: { type: 'string', enum: ['scheduled', 'completed', 'cancelled'] },
+          notes: { type: 'string' },
+        },
+      },
+      CreateSessionRequest: {
+        type: 'object',
+        required: ['therapist_id', 'scheduled_at'],
+        properties: {
+          therapist_id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+          scheduled_at: { type: 'string', format: 'date-time', example: '2025-06-01T14:00:00.000Z' },
+          duration: { type: 'integer', example: 60 },
+          session_type: { type: 'string', enum: ['text', 'voice', 'video'], example: 'video' },
+        },
+      },
+      CompleteSessionRequest: {
+        type: 'object',
+        properties: { notes: { type: 'string' } },
+      },
+
+      // Therapist schema
+      Therapist: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          first_name: { type: 'string' },
+          last_name: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          specializations: { type: 'array', items: { type: 'string' } },
+          bio: { type: 'string' },
+          experience_years: { type: 'integer', example: 8 },
+          rating: { type: 'number', example: 4.7 },
+          availability: { type: 'boolean' },
+          profile_image: { type: 'string' },
+        },
+      },
+
+      // User profile schemas
+      UpdateProfileRequest: {
+        type: 'object',
+        properties: {
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          phoneNumber: { type: 'string' },
+          country: { type: 'string' },
+        },
+      },
+      ChangePasswordRequest: {
+        type: 'object',
+        required: ['currentPassword', 'newPassword'],
+        properties: {
+          currentPassword: { type: 'string' },
+          newPassword: { type: 'string', minLength: 8 },
+        },
+      },
+
+      // Resource schemas
+      Resource: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          category: { type: 'string' },
+          type: { type: 'string', enum: ['article', 'video', 'podcast', 'guide'] },
+          url: { type: 'string' },
+          thumbnail: { type: 'string' },
+          duration: { type: 'string' },
+          author: { type: 'string' },
+          tags: { type: 'array', items: { type: 'string' } },
+          isBookmarked: { type: 'boolean' },
+        },
+      },
+
+      // Admin schemas
+      DashboardStats: {
+        type: 'object',
+        properties: {
+          totalUsers: { type: 'integer' },
+          activeUsers: { type: 'integer' },
+          totalSessions: { type: 'integer' },
+          totalAssessments: { type: 'integer' },
+          userGrowth: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                date: { type: 'string', example: '2025-05-01' },
+                count: { type: 'integer' },
+              },
+            },
+          },
+          platformHealth: {
+            type: 'object',
+            properties: {
+              serverStatus: { type: 'string', example: 'ok' },
+              responseTime: { type: 'number' },
+              errorRate: { type: 'number' },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -257,7 +486,7 @@ A secure, production-ready REST API for mental health services with comprehensiv
       get: {
         tags: ['Health'],
         summary: 'System health check',
-        description: 'Check if the API server is running and responsive. Used for monitoring and load balancer health checks.',
+        description: 'Check if the API server is running and responsive.',
         responses: {
           200: {
             description: 'Server is healthy and operational',
@@ -267,61 +496,34 @@ A secure, production-ready REST API for mental health services with comprehensiv
                   type: 'object',
                   properties: {
                     status: { type: 'string', example: 'ok' },
-                    timestamp: { type: 'string', format: 'date-time', example: '2025-11-20T08:00:00.000Z' },
+                    timestamp: { type: 'string', format: 'date-time' },
                   },
                 },
-                examples: {
-                  healthyResponse: {
-                    summary: 'Healthy server response',
-                    value: {
-                      status: 'ok',
-                      timestamp: '2025-11-20T08:00:00.000Z'
-                    }
-                  }
-                }
               },
             },
-          },
-          503: {
-            description: 'Server is not healthy (database connection issues, etc.)',
           },
         },
       },
     },
+
+    // ==================== AUTH ====================
     '/api/v1/auth/login': {
       post: {
         tags: ['Auth'],
         summary: 'Login user',
-        description: 'Authenticate user with email and password. Email verification requirement can be bypassed via REQUIRE_EMAIL_VERIFICATION environment variable (currently set to false for development).',
+        description: 'Authenticate a user with email and password.',
         requestBody: {
           required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/LoginRequest' },
-              examples: {
-                loginExample: {
-                  summary: 'Standard login',
-                  value: {
-                    email: 'user@example.com',
-                    password: 'SecurePass123!'
-                  }
-                }
-              }
-            },
-          },
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginRequest' } } },
         },
         responses: {
           200: {
-            description: 'Login successful - Returns user data and JWT tokens',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/AuthResponse' },
-              },
-            },
+            description: 'Login successful — returns user data and JWT tokens',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AuthResponse' } } },
           },
           401: { description: 'Invalid email or password' },
-          403: { description: 'Email verification required (only if REQUIRE_EMAIL_VERIFICATION=true)' },
-          429: { description: 'Too many login attempts - rate limited' },
+          403: { description: 'Email verification required' },
+          429: { description: 'Too many login attempts — rate limited' },
         },
       },
     },
@@ -329,116 +531,19 @@ A secure, production-ready REST API for mental health services with comprehensiv
       post: {
         tags: ['Auth'],
         summary: 'Register a new user',
-        description: 'Create a new user account with comprehensive validation. Features: Rate limiting (5/hour), Nigerian phone validation, gender/country selection, email verification with graceful fallback, age verification (18+), and secure password requirements.',
+        description: 'Create a new user account with email or Nigerian phone number.',
         requestBody: {
           required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/RegisterRequest' },
-              examples: {
-                completeExample: {
-                  summary: 'Complete Registration Fields (Choose Email OR Phone)',
-                  description: 'Shows all available fields. Use either email OR phoneNumber, not both.',
-                  value: {
-                    email: 'john.doe@example.com',
-                    phoneNumber: '+2348012345678',
-                    password: 'SecurePass123!',
-                    confirmPassword: 'SecurePass123!',
-                    firstName: 'John',
-                    lastName: 'Doe',
-                    dateOfBirth: '1990-01-01',
-                    gender: 'male',
-                    country: 'Nigeria',
-                    role: 'user',
-                    acceptTerms: true,
-                    recaptchaToken: 'optional-recaptcha-token'
-                  }
-                },
-                emailOnly: {
-                  summary: 'Email Registration',
-                  description: 'Register with email address only',
-                  value: {
-                    email: 'user@example.com',
-                    password: 'SecurePass123!',
-                    confirmPassword: 'SecurePass123!',
-                    firstName: 'John',
-                    lastName: 'Doe',
-                    dateOfBirth: '1990-01-01',
-                    gender: 'male',
-                    country: 'Nigeria',
-                    acceptTerms: true
-                  }
-                },
-                phoneOnly: {
-                  summary: 'Phone Registration',
-                  description: 'Register with Nigerian phone number only',
-                  value: {
-                    phoneNumber: '+2348012345678',
-                    password: 'SecurePass123!',
-                    confirmPassword: 'SecurePass123!',
-                    firstName: 'Jane',
-                    lastName: 'Smith',
-                    dateOfBirth: '1992-05-15',
-                    gender: 'female',
-                    country: 'Nigeria',
-                    acceptTerms: true
-                  }
-                },
-                therapistExample: {
-                  summary: 'Therapist Registration',
-                  description: 'Register as a mental health professional',
-                  value: {
-                    email: 'dr.sarah@clinic.com',
-                    password: 'SecurePass123!',
-                    confirmPassword: 'SecurePass123!',
-                    firstName: 'Dr. Sarah',
-                    lastName: 'Johnson',
-                    dateOfBirth: '1985-03-15',
-                    gender: 'female',
-                    country: 'Nigeria',
-                    role: 'therapist',
-                    acceptTerms: true
-                  }
-                }
-              }
-            },
-          },
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } } },
         },
         responses: {
           201: {
-            description: 'User created successfully - Registration completes even if email verification fails',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/AuthResponse' },
-              },
-            },
+            description: 'Registration successful',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AuthResponse' } } },
           },
-          400: { 
-            description: 'Validation errors',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: false },
-                    message: { type: 'string', example: 'Validation failed' },
-                    errors: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          field: { type: 'string', example: 'phoneNumber' },
-                          message: { type: 'string', example: 'Valid Nigerian phone number is required (format: +234XXXXXXXXX, 11 digits total)' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          409: { description: 'Account with provided email or phone already exists' },
-          429: { description: 'Rate limit exceeded - 5 registration attempts per hour per IP' },
+          400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          409: { description: 'Account already exists' },
+          429: { description: 'Rate limit exceeded — 5 registration attempts per hour per IP' },
         },
       },
     },
@@ -464,9 +569,7 @@ A secure, production-ready REST API for mental health services with comprehensiv
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/LogoutRequest' } } },
         },
-        responses: {
-          204: { description: 'Logged out' },
-        },
+        responses: { 204: { description: 'Logged out' } },
       },
     },
     '/api/v1/auth/forgot-password': {
@@ -477,9 +580,7 @@ A secure, production-ready REST API for mental health services with comprehensiv
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/ForgotPasswordRequest' } } },
         },
-        responses: {
-          200: { description: 'If email exists, a reset link will be sent' },
-        },
+        responses: { 200: { description: 'If email exists, a reset link will be sent' } },
       },
     },
     '/api/v1/auth/reset-password': {
@@ -500,9 +601,7 @@ A secure, production-ready REST API for mental health services with comprehensiv
       get: {
         tags: ['Auth'],
         summary: 'Verify email',
-        parameters: [
-          { name: 'token', in: 'path', required: true, schema: { type: 'string' } },
-        ],
+        parameters: [{ name: 'token', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
           302: { description: 'Redirect to client success/failure page' },
           400: { description: 'Invalid verification token' },
@@ -523,6 +622,742 @@ A secure, production-ready REST API for mental health services with comprehensiv
         },
       },
     },
+
+    // ==================== ASSESSMENTS ====================
+    '/api/v1/assessments': {
+      get: {
+        tags: ['Assessments'],
+        summary: 'Get all assessments',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of assessments',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Assessment' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/assessments/history': {
+      get: {
+        tags: ['Assessments'],
+        summary: 'Get assessment history for the authenticated user',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of assessment results',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/AssessmentResult' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/assessments/results/{resultId}': {
+      get: {
+        tags: ['Assessments'],
+        summary: 'Get a single assessment result',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'resultId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Assessment result',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/AssessmentResult' },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Result not found' },
+        },
+      },
+    },
+    '/api/v1/assessments/{id}': {
+      get: {
+        tags: ['Assessments'],
+        summary: 'Get an assessment by ID',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Assessment object',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/Assessment' },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Assessment not found' },
+        },
+      },
+    },
+    '/api/v1/assessments/{assessmentId}/submit': {
+      post: {
+        tags: ['Assessments'],
+        summary: 'Submit answers for an assessment',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'assessmentId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/AssessmentSubmitRequest' } } },
+        },
+        responses: {
+          200: {
+            description: 'Submission processed; returns computed result',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/AssessmentResult' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Invalid answers' },
+          404: { description: 'Assessment not found' },
+        },
+      },
+    },
+
+    // ==================== CHAT ====================
+    '/api/v1/chat/sessions': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Get chat sessions for the authenticated user',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of chat sessions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/ChatSession' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Chat'],
+        summary: 'Start a new chat session with a counselor',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/StartChatRequest' } } },
+        },
+        responses: {
+          201: {
+            description: 'Chat session created',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/ChatSession' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/chat/sessions/{sessionId}/messages': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Get all messages for a chat session',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'List of messages',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/ChatMessage' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Chat'],
+        summary: 'Send a message in a chat session',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/SendMessageRequest' } } },
+        },
+        responses: {
+          200: {
+            description: 'Message sent',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/ChatMessage' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/chat/sessions/{sessionId}/end': {
+      post: {
+        tags: ['Chat'],
+        summary: 'End a chat session',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Session ended' } },
+      },
+    },
+    '/api/v1/chat/sessions/{sessionId}/read': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Mark messages in a session as read',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Messages marked as read' } },
+      },
+    },
+    '/api/v1/chat/counselors/available': {
+      get: {
+        tags: ['Chat'],
+        summary: 'Get list of available counselors',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of available counselors',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/AvailableCounselor' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // ==================== MOOD ====================
+    '/api/v1/mood': {
+      get: {
+        tags: ['Mood'],
+        summary: 'Get mood logs for the authenticated user',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'days',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 365, default: 30 },
+            description: 'Number of days to fetch',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'List of mood entries',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/MoodEntry' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Mood'],
+        summary: 'Save a mood entry (upsert by date)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/MoodEntryRequest' } } },
+        },
+        responses: {
+          201: {
+            description: 'Mood entry saved',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/MoodEntry' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // ==================== THERAPY SESSIONS ====================
+    '/api/v1/sessions': {
+      get: {
+        tags: ['Sessions'],
+        summary: 'Get all therapy sessions for the authenticated user',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of sessions',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/TherapySession' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Sessions'],
+        summary: 'Book a new therapy session',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateSessionRequest' } } },
+        },
+        responses: {
+          201: {
+            description: 'Session created',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/TherapySession' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/sessions/{id}': {
+      get: {
+        tags: ['Sessions'],
+        summary: 'Get a therapy session by ID',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Session object',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/TherapySession' },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Session not found' },
+        },
+      },
+    },
+    '/api/v1/sessions/{id}/cancel': {
+      patch: {
+        tags: ['Sessions'],
+        summary: 'Cancel a therapy session',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Session cancelled' } },
+      },
+    },
+    '/api/v1/sessions/{id}/complete': {
+      patch: {
+        tags: ['Sessions'],
+        summary: 'Mark a therapy session as completed',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: false,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/CompleteSessionRequest' } } },
+        },
+        responses: { 200: { description: 'Session completed' } },
+      },
+    },
+
+    // ==================== THERAPISTS ====================
+    '/api/v1/therapists': {
+      get: {
+        tags: ['Therapists'],
+        summary: 'Get all therapists',
+        responses: {
+          200: {
+            description: 'List of therapists',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Therapist' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/therapists/search': {
+      get: {
+        tags: ['Therapists'],
+        summary: 'Search therapists by name, specialization, or bio',
+        parameters: [
+          { name: 'q', in: 'query', required: false, schema: { type: 'string' }, description: 'Search query' },
+        ],
+        responses: {
+          200: {
+            description: 'List of matching therapists',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Therapist' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/therapists/filter': {
+      get: {
+        tags: ['Therapists'],
+        summary: 'Filter therapists',
+        parameters: [
+          { name: 'specialization', in: 'query', schema: { type: 'string' } },
+          { name: 'minRating', in: 'query', schema: { type: 'number' } },
+          { name: 'availability', in: 'query', schema: { type: 'boolean' } },
+        ],
+        responses: {
+          200: {
+            description: 'Filtered therapists',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Therapist' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/therapists/{id}': {
+      get: {
+        tags: ['Therapists'],
+        summary: 'Get a therapist by ID',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Therapist object',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/Therapist' },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Therapist not found' },
+        },
+      },
+    },
+
+    // ==================== USERS ====================
+    '/api/v1/users/profile': {
+      put: {
+        tags: ['Users'],
+        summary: 'Update authenticated user profile',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateProfileRequest' } } },
+        },
+        responses: {
+          200: {
+            description: 'Updated user',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/User' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/users/change-password': {
+      post: {
+        tags: ['Users'],
+        summary: 'Change password for the authenticated user',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/ChangePasswordRequest' } } },
+        },
+        responses: {
+          200: { description: 'Password changed successfully' },
+          400: { description: 'Current password incorrect or weak new password' },
+        },
+      },
+    },
+    '/api/v1/users/profile-picture': {
+      post: {
+        tags: ['Users'],
+        summary: 'Upload profile picture (jpeg, png, webp, gif up to 5 MB)',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: { file: { type: 'string', format: 'binary' } },
+                required: ['file'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Profile picture uploaded',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: {
+                      type: 'object',
+                      properties: { profilePicture: { type: 'string' } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'No file uploaded or invalid file type' },
+        },
+      },
+    },
+
+    // ==================== RESOURCES ====================
+    '/api/v1/resources': {
+      get: {
+        tags: ['Resources'],
+        summary: 'List resources (optionally filtered)',
+        parameters: [
+          { name: 'category', in: 'query', schema: { type: 'string' } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {
+          200: {
+            description: 'List of resources',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Resource' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/resources/bookmarked': {
+      get: {
+        tags: ['Resources'],
+        summary: 'Get all resources bookmarked by the authenticated user',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of bookmarked resources',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Resource' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/v1/resources/{resourceId}/bookmark': {
+      post: {
+        tags: ['Resources'],
+        summary: 'Bookmark a resource',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'resourceId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Resource bookmarked' } },
+      },
+      delete: {
+        tags: ['Resources'],
+        summary: 'Remove a resource bookmark',
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: 'resourceId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Bookmark removed' } },
+      },
+    },
+
+    // ==================== ADMIN ====================
+    '/api/v1/admin/dashboard': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Get dashboard statistics (admin only)',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Dashboard stats',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { $ref: '#/components/schemas/DashboardStats' },
+                  },
+                },
+              },
+            },
+          },
+          403: { description: 'Insufficient permissions' },
+        },
+      },
+    },
+    '/api/v1/admin/users': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Get paginated list of users (admin only)',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+          { name: 'status', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {
+          200: {
+            description: 'Paginated users list',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        users: { type: 'array', items: { $ref: '#/components/schemas/User' } },
+                        pagination: { $ref: '#/components/schemas/Pagination' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          403: { description: 'Insufficient permissions' },
+        },
+      },
+    },
   },
 };
 
@@ -532,3 +1367,6 @@ const options = {
 } as any;
 
 export const swaggerSpec = swaggerJSDoc(options);
+
+// API_BASE_URL is exported by ../config for client use; reference here to avoid unused-import warnings.
+void API_BASE_URL;

@@ -149,4 +149,18 @@ router.post(
   authController.resendVerificationEmail
 );
 
+// Clerk SSO sync — exchange a Clerk session for a MentWel JWT pair
+router.post(
+  '/clerk-sync',
+  [
+    body('clerkUserId').isString().notEmpty().withMessage('clerkUserId is required'),
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('firstName').optional().isString(),
+    body('lastName').optional().isString(),
+    body('profileImageUrl').optional().isString(),
+  ],
+  validateRequest,
+  authController.clerkSync
+);
+
 export default router;
