@@ -19,6 +19,7 @@ export interface IUser extends Document {
   gender: Gender;
   country: Country;
   acceptedTermsAt?: Date;
+  profilePicture?: string;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -40,6 +41,7 @@ const UserSchema = new Schema<IUser>(
     gender: { type: String, enum: Object.values(Gender), required: true },
     country: { type: String, enum: Object.values(Country), default: Country.NIGERIA },
     acceptedTermsAt: { type: Date },
+    profilePicture: { type: String },
   },
   { timestamps: true }
 );
