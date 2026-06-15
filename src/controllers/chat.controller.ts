@@ -87,7 +87,7 @@ const assertParticipant = async (sessionId: string, userId: string) => {
  */
 export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  const sessionId = String(req.params.sessionId);
+  const { sessionId } = req.params as { sessionId: string };
   await assertParticipant(sessionId, req.user.id);
 
   const messages = await ChatMessage.find({ session: sessionId })
