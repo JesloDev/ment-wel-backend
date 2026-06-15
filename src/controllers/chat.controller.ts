@@ -87,9 +87,10 @@ const assertParticipant = async (sessionId: string, userId: string) => {
  */
 export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  await assertParticipant(req.params.sessionId, req.user.id);
+  const sessionId = String(req.params.sessionId);
+  await assertParticipant(sessionId, req.user.id);
 
-  const messages = await ChatMessage.find({ session: req.params.sessionId })
+  const messages = await ChatMessage.find({ session: sessionId })
     .sort({ timestamp: 1 })
     .lean();
 
@@ -112,7 +113,8 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
  */
 export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  const session = await assertParticipant(req.params.sessionId, req.user.id);
+  const sessionId = String(req.params.sessionId);
+  const session = await assertParticipant(sessionId, req.user.id);
 
   const { content, type } = req.body as { content: string; type?: 'text' | 'image' | 'file' };
   if (!content) throw ApiError.badRequest('content is required');
@@ -183,7 +185,7 @@ export const startChatSession = async (req: AuthenticatedRequest, res: Response)
  */
 export const endChatSession = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  const session = await assertParticipant(req.params.sessionId, req.user.id);
+  const session = await assertParticipant(String(req.params.sessionId), req.user.id);
   session.status = 'ended';
   session.endedAt = new Date();
   await session.save();
@@ -195,14 +197,15 @@ export const endChatSession = async (req: AuthenticatedRequest, res: Response) =
  */
 export const markAsRead = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) throw ApiError.unauthorized();
-  await assertParticipant(req.params.sessionId, req.user.id);
+  const sessionId = String(req.params.sessionId);
+  await assertParticipant(sessionId, req.user.id);
 
   // Mark messages from the OTHER party as read
   const otherSenderType: SenderType =
     req.user.role === UserRole.THERAPIST ? 'user' : 'counselor';
 
   await ChatMessage.updateMany(
-    { session: req.params.sessionId, senderType: otherSenderType, read: false },
+    { session: sessionId, senderType: otherSenderType, read: false },
     { $set: { read: true } }
   );
 
