@@ -49,6 +49,10 @@ router.use('/assessments', authenticate, assessmentRoutes);
 import chatRoutes from './chat.routes';
 router.use('/chat', authenticate, chatRoutes);
 
+// AI endpoints (Groq) — frontend should call backend at /api/v1/ai/chat
+import aiRoutes from './ai.routes';
+router.use('/ai', aiRoutes);
+
 // Mood tracking routes
 import moodRoutes from './mood.routes';
 router.use('/mood', authenticate, moodRoutes);

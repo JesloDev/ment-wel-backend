@@ -1,14 +1,15 @@
-import dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config({ path: path.join(process.cwd(), '.env') });
-
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 export const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 export const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 export const LOG_FORMAT = process.env.LOG_FORMAT || 'dev';
 
-export const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mentwel';
+// MONGODB_URI must be set — no localhost fallback allowed
+if (!process.env.MONGODB_URI) {
+  console.error('FATAL: MONGODB_URI environment variable is not set.');
+  console.error('Set it in your .env file (Atlas connection string) or in your deployment environment variables.');
+  process.exit(1);
+}
+export const MONGODB_URI = process.env.MONGODB_URI;
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '15m';
