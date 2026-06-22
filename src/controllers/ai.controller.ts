@@ -20,8 +20,14 @@ export const handleChat = async (req: Request, res: Response) => {
     // Return in a stable structure expected by frontend
     return res.status(StatusCodes.OK).json({ success: true, data: result });
   } catch (err) {
-    logger.error('AI chat error', { error: (err as Error).message });
     const message = (err as Error).message || 'AI chat failed';
+    logger.error('AI chat error', { error: message });
+
+    // Network/DNS errors when contacting Groq should be surfaced as 502 Bad Gateway
+    if (message.includes('getaddrinfo') || message.includes('ENOTFOUND') || message.includes('ECONNREFUSED') || message.includes('ENETUNREACH')) {
+      return res.status(StatusCodes.BAD_GATEWAY).json({ success: false, error: `Unable to reach Groq API: ${message}` });
+    }
+
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, error: message });
   }
 };
