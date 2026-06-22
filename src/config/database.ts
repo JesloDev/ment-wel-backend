@@ -37,19 +37,25 @@ process.on('SIGTERM', exitHandler);
  */
 export const initializeDatabase = async (): Promise<void> => {
   try {
-    if (!MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined in environment variables');
-    }
+    // MONGODB_URI is guaranteed to be set by config/index.ts (exits if missing)
+    const isAtlas = MONGODB_URI.includes('mongodb+srv') || MONGODB_URI.includes('mongodb.net');
 
     const options = {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
     };
 
     await mongoose.connect(MONGODB_URI, options);
-    
-    logger.info('Connected to MongoDB');
-    logger.info(`MongoDB URI: ${MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')}`);
+
+    const maskedUri = MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+    if (isAtlas) {
+      logger.info('Using MongoDB Atlas');
+      console.log('Using MongoDB Atlas');
+    } else {
+      logger.info('Using local MongoDB');
+      console.log('Using local MongoDB');
+    }
+    logger.info(`Connected to MongoDB: ${maskedUri}`);
   } catch (error) {
     logger.error('MongoDB connection error:', error);
     process.exit(1);

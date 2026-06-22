@@ -1,4 +1,9 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load .env from project root as the very first thing
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -202,8 +207,9 @@ class App {
 console.log('Starting MentWel Backend...');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT || 5000);
-console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
-console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+console.log('MONGODB_URI set:', !!process.env.MONGODB_URI);
+console.log('MONGODB_URI is Atlas:', (process.env.MONGODB_URI || '').includes('mongodb.net'));
+console.log('JWT_SECRET set:', !!process.env.JWT_SECRET);
 
 const app = new App();
 app.initialize().then(() => {
