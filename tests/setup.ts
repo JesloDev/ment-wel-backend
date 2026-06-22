@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
@@ -71,4 +72,6 @@ afterEach(async () => {
   const collections = await db.collections();
   await Promise.all(collections.map((c) => c.deleteMany({})));
 });
+
+// (Jest provides `beforeAll`/`afterAll` globals) - no local stubs needed
 
