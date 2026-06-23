@@ -1,4 +1,4 @@
-/// <reference types="jest" />
+import { jest, beforeAll, afterAll, afterEach } from '@jest/globals';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
