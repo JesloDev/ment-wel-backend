@@ -94,8 +94,9 @@ class App {
       'http://localhost:3000',
       'http://localhost:8000',
       'http://localhost:5000',
+      'https://ment-wel.vercel.app',
       ...extraOrigins,
-      ...(ORIGIN as string[]),
+      ...(Array.isArray(ORIGIN) ? ORIGIN : typeof ORIGIN === 'string' ? [ORIGIN] : []),
     ].filter(Boolean)));
 
     const corsOptions = {
@@ -117,13 +118,14 @@ class App {
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
     };
 
+    this.app.use(cors(corsOptions));
     this.app.use((req, res, next) => {
-      // Short-circuit OPTIONS to ensure preflight returns correct headers quickly
-      if (req.method === 'OPTIONS') {
-        return cors(corsOptions)(req, res, next);
-      }
-      return cors(corsOptions)(req, res, next);
-    });
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+    this.app.options('*', cors(corsOptions));
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(compression());
